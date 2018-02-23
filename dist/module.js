@@ -13,7 +13,7 @@ angular.module('sendSms').component('ocaSendSms', {
     var _this = this;
 
     this.$onInit = function () {
-      $scope.carriers = smsOptions.smsCarriers;
+      $scope.carriers = angular.equals(smsCarriers, {}) ? smsCarriersDefault : smsCarriers;
       _this.carrier = _this.phoneNumber = _this.gCaptchaResponse = _this.statusMessage = '';
       _this.telRegEx = /^\d{3}( |-)?\d{3}( |-)?\d{4}$/;
       _this.statusCode = 200;
@@ -21,9 +21,7 @@ angular.module('sendSms').component('ocaSendSms', {
     this.validate = function () {
       return _this.telRegEx.test(_this.phoneNumber) && _this.carrier && (_this.isCaptcha ? _this.gCaptchaResponse : true);
     };
-    this.isCaptcha = function () {
-      return window.appConfig['system-configuration']['Activate Captcha [Y/N]'] == 'Y';
-    };
+    this.isCaptcha = window.appConfig['system-configuration']['Activate Captcha [Y/N]'] == 'Y';
     this.getCaptchaPublicKey = function () {
       return window.appConfig['system-configuration']['Public Captcha Key'];
     };
@@ -42,8 +40,7 @@ angular.module('sendSms').component('ocaSendSms', {
         if (_this.item.delivery.holding.length > 0) {
           var holdings = '';
           _this.item.delivery.holding.forEach(function (holding) {
-            if (holding.organization == $state.params.vid) {
-              //need to find a better way of identifying local institution
+            if (holding.organization == appConfig['primo-view']['institution']['institution-code']) {
               if (holdings != '') holdings += '<br><br>';
               holdings += 'Location: ' + holding.subLocation + '<br>';
               holdings += 'Call Number: ' + holding.callNumber + '<br>';
@@ -67,7 +64,7 @@ angular.module('sendSms').component('ocaSendSms', {
           _this.setStatusCode(err.status);
           _this.setStatusMessage(err.statusText);
           _this.setResponse('');
-          grecaptcha.reset();
+          if(typeof grecaptcha !== 'undefined') grecaptcha.reset();
           console.error('sms sending failed', err);
         }).finally(function () {
           return _this.statusCode == 200 ? _this.finishedSmsEvent() : '';

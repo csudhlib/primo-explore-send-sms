@@ -38,8 +38,10 @@ angular.module('sendSms')
                     <span class="recaptcha-error-info" ng-show="smsForm.$submitted && ($ctrl.statusCode != 200 || smsForm.recaptchaResponse.$invalid || smsForm.$error.recaptcha.length)">
                       <span translate="captcha.notselected"></span>
                     </span>
+                  </md-input-container>
+                  <md-input-container class="underlined-input" ng-show="$ctrl.statusCode != 200">
                     <span class="recaptcha-error-info" ng-show="$ctrl.statusCode != 200">
-                      <br><span>{{$ctrl.statusMessage}}</span>
+                      <span>{{$ctrl.statusMessage}}</span>
                     </span>
                   </md-input-container>
                 </div>
@@ -59,7 +61,7 @@ angular.module('sendSms')
       </md-content>
     </div>
     <oca-send-sms-after parent-ctrl="$ctrl"></oca-send-sms-after>`,
-  controller: ['$http', '$scope', '$state', 'smsCarriers', 'smsCarriersDefault', 'smsOptions', 'smsOptionsDefault', function ($http, $scope, $state, smsCarriers, smsCarriersDefault, smsOptions, smsOptionsDefault) {
+  controller: ['$http', '$scope', 'smsCarriers', 'smsCarriersDefault', 'smsOptions', 'smsOptionsDefault', function ($http, $scope, smsCarriers, smsCarriersDefault, smsOptions, smsOptionsDefault) {
     this.$onInit = () => {
       $scope.carriers = angular.equals(smsCarriers, {}) ? smsCarriersDefault : smsCarriers
       this.carrier = this.phoneNumber = this.gCaptchaResponse = this.statusMessage = ''
@@ -67,7 +69,7 @@ angular.module('sendSms')
       this.statusCode = 200
     }
     this.validate = () => this.telRegEx.test(this.phoneNumber) && this.carrier && (this.isCaptcha ? this.gCaptchaResponse : true)
-    this.isCaptcha = () => window.appConfig['system-configuration']['Activate Captcha [Y/N]'] == 'Y'
+    this.isCaptcha = window.appConfig['system-configuration']['Activate Captcha [Y/N]'] == 'Y'
     this.getCaptchaPublicKey = () => window.appConfig['system-configuration']['Public Captcha Key']
     this.setResponse = (response) => this.gCaptchaResponse = response
     this.setStatusCode = (code) => this.statusCode = code
@@ -78,7 +80,7 @@ angular.module('sendSms')
       if(this.item.delivery.holding.length > 0) {
         let holdings = ''
         this.item.delivery.holding.forEach(function (holding) {
-          if(holding.organization == $state.params.vid) { //need to find a better way of identifying local institution
+          if(holding.organization == appConfig['primo-view']['institution']['institution-code']) {
             if(holdings != '') holdings += '<br><br>'
             holdings += 'Location: ' + holding.subLocation + '<br>'
             holdings += 'Call Number: ' + holding.callNumber + '<br>'
