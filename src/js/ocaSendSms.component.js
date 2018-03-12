@@ -25,7 +25,7 @@ angular.module('sendSms')
                   <md-input-container class="md-required">
                     <label>Carrier:</label>
                     <md-select ng-model="$ctrl.carrier" name="carrier" placeholder="Select a carrier" required>
-                      <md-option ng-repeat="(carrier, address) in carriers" value="{{ address }}">
+                      <md-option ng-repeat="(carrier, address) in $ctrl.carriers" value="{{ address }}">
                         {{ carrier }}
                       </md-option>
                     </md-select>
@@ -61,9 +61,10 @@ angular.module('sendSms')
       </md-content>
     </div>
     <oca-send-sms-after parent-ctrl="$ctrl"></oca-send-sms-after>`,
-  controller: ['$http', '$scope', 'smsCarriers', 'smsCarriersDefault', 'smsOptions', 'smsOptionsDefault', function ($http, $scope, smsCarriers, smsCarriersDefault, smsOptions, smsOptionsDefault) {
+  controller: ['$http', 'smsCarriers', 'smsCarriersDefault', 'smsOptions', 'smsOptionsDefault', function ($http, smsCarriers, smsCarriersDefault, smsOptions, smsOptionsDefault) {
+    this.noPrintFoundLabel = smsOptions.hasOwnProperty("noPrintFoundLabel") ? smsOptions.noPrintFoundLabel : smsOptionsDefault.noPrintFoundLabel
     this.$onInit = () => {
-      $scope.carriers = angular.equals(smsCarriers, {}) ? smsCarriersDefault : smsCarriers
+      this.carriers = angular.equals(smsCarriers, {}) ? smsCarriersDefault : smsCarriers
       this.carrier = this.phoneNumber = this.gCaptchaResponse = this.statusMessage = ''
       this.telRegEx = /^\d{3}( |-)?\d{3}( |-)?\d{4}$/
       this.statusCode = 200
@@ -75,28 +76,28 @@ angular.module('sendSms')
     this.setStatusCode = (code) => this.statusCode = code
     this.setStatusMessage = (message) => this.statusMessage = message
     this.sendSms = () => {
-    if (this.validate()) {
-      let message = 'Title: ' + this.item.pnx.display.title + '<br><br>'
-      if(this.item.delivery.holding.length > 0) {
-        let holdings = ''
-        this.item.delivery.holding.forEach(function (holding) {
-          if(holding.organization == appConfig['primo-view']['institution']['institution-code']) {
-            if(holdings != '') holdings += '<br><br>'
-            holdings += 'Location: ' + holding.subLocation + '<br>'
-            holdings += 'Call Number: ' + holding.callNumber + '<br>'
-            holdings += 'Currently ' + holding.availabilityStatus
-          }
-        });
-        if(holdings == '') message += 'No Print Locations'
-        else message += holdings
-      } else message += 'No Print Locations'
-      $http.post((smsOptions.form_url || smsOptionsDefault.form_url), {
-        "from": smsOptions.from_email || smsOptionsDefault.from_email,
-        "to": this.phoneNumber + '@' + this.carrier,
-        "subject": smsOptions.subject || smsOptionsDefault.subject,
-        "message": message,
-        "gCaptchaResponse": this.gCaptchaResponse
-      }).then((msg) => {
+      if (this.validate()) {
+        let message = 'Title: ' + this.item.pnx.display.title + '<br><br>'
+        if(this.item.delivery.holding.length > 0) {
+          let holdings = ''
+          this.item.delivery.holding.forEach(function (holding) {
+            if(holding.organization == appConfig['primo-view']['institution']['institution-code']) {
+              if(holdings != '') holdings += '<br><br>'
+              holdings += 'Location: ' + holding.subLocation + '<br>'
+              holdings += 'Call Number: ' + holding.callNumber + '<br>'
+              holdings += 'Currently ' + holding.availabilityStatus
+            }
+          });
+          if(holdings == '') message += this.noPrintFoundLabel
+          else message += holdings
+        } else message += this.noPrintFoundLabel
+        $http.post((smsOptions.formUrl || smsOptionsDefault.formUrl), {
+          "from": smsOptions.fromEmail || smsOptionsDefault.fromEmail,
+          "to": this.phoneNumber + '@' + this.carrier,
+          "subject": smsOptions.subject || smsOptionsDefault.subject,
+          "message": message,
+          "gCaptchaResponse": this.gCaptchaResponse
+        }).then((msg) => {
           this.setStatusCode(msg.status)
           this.setStatusMessage(msg.statusText)
           console.log('sms successfully sent', msg)
@@ -104,13 +105,15 @@ angular.module('sendSms')
           this.setStatusCode(err.status)
           this.setStatusMessage(err.statusText)
           this.setResponse('')
-          grecaptcha.reset()
+          if(typeof grecaptcha !== 'undefined') grecaptcha.reset()
           console.error('sms sending failed', err)
         }).finally(() => this.statusCode == 200 ? this.finishedSmsEvent() : '')
       }
     }
   }],
-}).run(['$templateCache', 'smsAction', 'smsActionDefault', function ($templateCache, smsAction, smsActionDefault) {
-  $templateCache.put('components/search/actions/actionContainer/action-container.html', '<oca-send-sms ng-if="($ctrl.actionName===\'' + (smsAction.name || smsActionDefault.name) + '\')" finished-sms-event="$ctrl.throwCloseTabsEvent()" item="::$ctrl.item"></oca-send-sms>' + $templateCache.get('components/search/actions/actionContainer/action-container.html'));
-  $templateCache.put('components/search/actions/action-list.html', $templateCache.get('components/search/actions/action-list.html').replace('</md-nav-item>', '</md-nav-item><sms-action />'));
+}).run(['$templateCache', 'smsAction', 'smsActionDefault', 'smsOptions', 'smsOptionsDefault', function ($templateCache, smsAction, smsActionDefault, smsOptions, smsOptionsDefault) {
+  if(smsOptions.hasOwnProperty("enabled") ? smsOptions.enabled : smsOptionsDefault.enabled) {
+    $templateCache.put('components/search/actions/actionContainer/action-container.html', '<oca-send-sms ng-if="($ctrl.actionName===\'' + (smsAction.name || smsActionDefault.name) + '\')" finished-sms-event="$ctrl.throwCloseTabsEvent()" item="::$ctrl.item"></oca-send-sms>' + $templateCache.get('components/search/actions/actionContainer/action-container.html'));
+    $templateCache.put('components/search/actions/action-list.html', $templateCache.get('components/search/actions/action-list.html').replace('</md-nav-item>', '</md-nav-item><sms-action />'));
+  }
 }])
