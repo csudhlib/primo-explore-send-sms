@@ -30,7 +30,7 @@
 
 			//Recipients
 			$mail->setFrom($params['from'], 'Mailer');
-			$mail->addAddress($params['to']);               // Name is optional
+			$mail->addAddress($params['to']);               
 			$mail->addReplyTo($params['from'], 'Mailer');
 
 			//Content
